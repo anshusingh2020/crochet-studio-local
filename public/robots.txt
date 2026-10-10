@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /api/
+Disallow: /signin-with-chatgpt
+Disallow: /signout-with-chatgpt
+Sitemap: https://crochet-studio-anshu.aglowhawk8.chatgpt.site/sitemap.xml

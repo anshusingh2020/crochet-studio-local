@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {isAdminEmail,canAccessOrder,canTransition} from '../lib/permissions.ts';
+assert.equal(isAdminEmail(undefined,'owner@example.test'),false);
+assert.equal(isAdminEmail('customer@example.test','owner@example.test'),false);
+assert.equal(isAdminEmail('owner@example.test',undefined),false);
+assert.equal(isAdminEmail('OWNER@example.test','owner@example.test'),true);
+assert.equal(canAccessOrder('customer-a',false,'customer-b'),false);
+assert.equal(canAccessOrder('customer-a',false,'customer-a'),true);
+assert.equal(canAccessOrder('owner',true,'customer-a'),true);
+assert.equal(canTransition('requested','paid'),false);
+assert.equal(canTransition('accepted','shipped'),false);
+assert.equal(canTransition('accepted','paid'),true);
+assert.equal(canTransition('paid','making'),true);
+assert.equal(canTransition('making','shipped'),true);
+assert.equal(canTransition('shipped','delivered'),true);
+assert.equal(canTransition('delivered','making'),false);
+console.log('Role isolation and fulfilment transition tests passed.');

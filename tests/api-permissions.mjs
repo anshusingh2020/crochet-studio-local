@@ -1,0 +1,21 @@
+import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import assert from 'node:assert/strict';import * as permissions from '../lib/permissions.ts';
+let identity={user:null,admin:false};let row=null;let writes=0;let blobReads=0;
+const query={from(){return this},where(){return this},orderBy(){return this},limit(){return Promise.resolve([])},get(){return Promise.resolve(row)},all(){return Promise.resolve([])}};
+const db={select:()=>query,insert(){writes++;throw Error('Unexpected mutation')},update(){writes++;throw Error('Unexpected mutation')}};
+function load(path){const code=ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const module={exports:{}};const deps={'../../../lib/server':{context:async()=>identity,json:(x,status=200)=>Response.json(x,{status}),validOrigin:()=>true,throttle:async()=>true,body:req=>req.json()},'../../../lib/permissions':permissions,'../../../db':{getDb:()=>db},'../../../db/schema':{orders:{id:'id',userId:'user_id',status:'status',amount:'amount',created:'created'},messages:{orderId:'order_id'},products:{image:'image',published:'published'},profiles:{}},'drizzle-orm':{eq:(a,b)=>({a,b}),and:(...x)=>x,desc:x=>x,asc:x=>x,lt:(a,b)=>({a,b})},'cloudflare:workers':{env:{ADMIN_EMAIL:'owner@example.test',BUCKET:{get:async()=>{blobReads++;return null}}}},'../../chatgpt-auth':{getChatGPTUser:async()=>identity.user}};vm.runInNewContext(code,{exports:module.exports,require:key=>{if(!(key in deps))throw Error(key);return deps[key]},Response,URL,crypto,Date,Set,JSON,File,Uint8Array,String});return module.exports;}
+const studio=load('app/api/studio/route.ts');const catalogue=load('app/api/catalogue/route.ts');const files=load('app/api/files/route.ts');
+const post=x=>new Request('https://shop.test/api/studio',{method:'POST',headers:{'Content-Type':'application/json',origin:'https://shop.test'},body:JSON.stringify(x)});
+assert.equal((await studio.GET(new Request('https://shop.test/api/studio'))).status,401);
+assert.equal((await catalogue.POST(post({action:'archive',id:'p'}))).status,401);
+identity={user:{userId:'customer-a',email:'a@example.test'},admin:false};row={id:'o',userId:'customer-b',status:'quoted',amount:1200};
+assert.equal((await studio.GET(new Request('https://shop.test/api/studio?order=o'))).status,404);
+assert.equal((await studio.POST(post({action:'message',id:'o',body:'Forbidden write'}))).status,404);
+assert.equal((await files.GET(new Request('https://shop.test/api/files?key=customer-b/design'))).status,404);
+row={id:'o',userId:'customer-a',status:'accepted',amount:1200};
+assert.equal((await studio.POST(post({action:'quote',id:'o',amount:1}))).status,403);
+assert.equal((await studio.POST(post({action:'status',id:'o',status:'paid',paymentRef:'fake'}))).status,403);
+assert.equal((await catalogue.POST(post({action:'archive',id:'p'}))).status,403);
+identity={user:null,admin:false};assert.equal((await files.GET(new Request('https://shop.test/api/files?key=customer-a/design'))).status,401);
+assert.equal((await catalogue.GET(new Request('https://shop.test/api/catalogue?all=1'))).status,403);
+assert.equal((await catalogue.GET(new Request('https://shop.test/api/catalogue'))).status,200);
+assert.equal(writes,0);assert.equal(blobReads,0);console.log('Anonymous, cross-customer, admin-write and private-image API denial tests passed.');

@@ -1,0 +1,3 @@
+import "./globals.css";
+export const metadata={title:"Crochet Studio | Made slowly. Loved forever.",description:"Handmade crochet, thoughtful gifts and custom creations. Discuss your design directly with the maker.",metadataBase:new URL("https://crochet-studio-anshu.aglowhawk8.chatgpt.site"),openGraph:{title:"Crochet Studio — Handmade with care",description:"Custom crochet pieces, personal conversations, thoughtful gifts.",type:"website"}};
+export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

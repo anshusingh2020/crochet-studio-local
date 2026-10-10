@@ -1,0 +1,2 @@
+export function kafkaRecord(event:{id:string;order_id:string;kind:string;created:string;payload:string}){return {key:event.order_id,value:{schemaVersion:1,eventId:event.id,orderId:event.order_id,type:event.kind,occurredAt:event.created,data:JSON.parse(event.payload)}};}
+export function producerAcknowledged(result:any){return Array.isArray(result?.offsets)&&result.offsets.length===1&&result.offsets[0].error_code==null&&Number.isInteger(result.offsets[0].offset)&&result.offsets[0].offset>=0;}

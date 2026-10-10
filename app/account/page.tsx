@@ -1,0 +1,1 @@
+import {requireChatGPTUser} from "../chatgpt-auth";import Account from "./account";export const dynamic="force-dynamic";export const metadata={title:"Your studio account",robots:{index:false,follow:false}};export default async function Page(){await requireChatGPTUser('/account');return <Account/>;}
