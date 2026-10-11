@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: crochet-studio-java
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./crochet-java/Dockerfile.render
+    dockerContext: ./crochet-java
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ORIGIN
+        sync: false
+      - key: SECURE_COOKIE
+        value: "true"
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SCHEMA
+        value: crochet
+      - key: DB_POOL_SIZE
+        value: "3"
+      - key: SUPER_ADMIN_EMAIL
+        value: anshusingh2011111@gmail.com
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: STORAGE_PROVIDER
+        value: supabase
+      - key: SUPABASE_URL
+        value: https://oeyehuezqluqxjptljht.supabase.co
+      - key: SUPABASE_BUCKET
+        value: crochet-images
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: KAFKA_ENABLED
+        value: "false"

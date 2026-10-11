@@ -12,6 +12,12 @@ public class MailService {
   private final Db db;
   private final String from, origin, owner;
 
+  @Value("${MAIL_PROVIDER:smtp}")
+  private String provider;
+
+  @Value("${RESEND_API_KEY:}")
+  private String apiKey;
+
   public MailService(
       JavaMailSender sender,
       Db db,
@@ -26,6 +32,25 @@ public class MailService {
   }
 
   public void send(String to, String subject, String text) {
+    if ("resend".equals(provider)) {
+      if (apiKey.isBlank()) throw new ApiError(503, "Email delivery has not been configured.");
+      var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+      factory.setConnectTimeout(10000);
+      factory.setReadTimeout(20000);
+      org.springframework.web.client.RestClient.builder()
+          .requestFactory(factory)
+          .build()
+          .post()
+          .uri("https://api.resend.com/emails")
+          .header("Authorization", "Bearer " + apiKey)
+          .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+          .body(Map.of("from", from, "to", java.util.List.of(to), "subject", subject, "text", text))
+          .retrieve()
+          .toBodilessEntity();
+      return;
+    }
+    if (!"smtp".equals(provider))
+      throw new ApiError(503, "Email delivery has not been configured.");
     var m = new SimpleMailMessage();
     m.setFrom(from);
     m.setTo(to);

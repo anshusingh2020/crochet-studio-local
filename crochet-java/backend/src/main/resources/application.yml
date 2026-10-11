@@ -6,9 +6,12 @@ spring:
     username: ${DB_USER:crochet}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: 10
+      schema: ${DB_SCHEMA:public}
+      maximum-pool-size: ${DB_POOL_SIZE:5}
   flyway:
     enabled: true
+    default-schema: ${DB_SCHEMA:public}
+    schemas: ${DB_SCHEMA:public}
   servlet:
     multipart:
       max-file-size: 5MB
@@ -37,7 +40,7 @@ spring:
         max.block.ms: 5000
 server:
   forward-headers-strategy: native
-  port: 8080
+  port: ${PORT:8080}
   error:
     include-message: never
     include-stacktrace: never
