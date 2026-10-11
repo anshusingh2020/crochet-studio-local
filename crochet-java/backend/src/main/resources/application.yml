@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: crochet-studio
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/crochet}
+    username: ${DB_USER:crochet}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_TLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+        max.block.ms: 5000
+server:
+  forward-headers-strategy: native
+  port: 8080
+  error:
+    include-message: never
+    include-stacktrace: never
+  tomcat:
+    max-http-form-post-size: 32KB
+    threads:
+      max: 100
+studio:
+  origin: ${APP_ORIGIN:http://localhost:8088}
+  secure-cookie: ${SECURE_COOKIE:false}
+  super-email: ${SUPER_ADMIN_EMAIL}
+  super-password: ${SUPER_ADMIN_PASSWORD}
+  mail-from: ${MAIL_FROM:studio@crochet.local}
+  uploads: ${UPLOAD_DIR:./uploads}
+  kafka-enabled: ${KAFKA_ENABLED:false}
+  kafka-topic: crochet.order-events

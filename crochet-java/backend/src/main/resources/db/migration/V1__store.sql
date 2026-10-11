@@ -1,0 +1,17 @@
+CREATE TABLE users(id varchar(36) PRIMARY KEY,email varchar(254) UNIQUE NOT NULL,name varchar(100) NOT NULL,password_hash text NOT NULL,role varchar(20) NOT NULL CHECK(role IN ('SUPER_ADMIN','ADMIN','CUSTOMER')),status varchar(20) NOT NULL CHECK(status IN ('unverified','pending','approved','rejected','revoked')),created timestamptz NOT NULL DEFAULT now(),reviewed timestamptz,reviewed_by varchar(36),owner_notified boolean NOT NULL DEFAULT false);
+CREATE UNIQUE INDEX exactly_one_super_admin ON users(role) WHERE role='SUPER_ADMIN';
+CREATE TABLE sessions(token_hash varchar(64) PRIMARY KEY,user_id varchar(36) NOT NULL REFERENCES users(id),expires timestamptz NOT NULL);
+CREATE INDEX session_expiry ON sessions(expires);
+CREATE TABLE auth_tokens(token_hash varchar(64) PRIMARY KEY,user_id varchar(36) NOT NULL REFERENCES users(id),purpose varchar(10) NOT NULL,expires timestamptz NOT NULL);
+CREATE TABLE admin_audit(id varchar(36) PRIMARY KEY,account_id varchar(36) NOT NULL REFERENCES users(id),actor varchar(36) NOT NULL REFERENCES users(id),action varchar(20) NOT NULL,created timestamptz NOT NULL DEFAULT now());
+CREATE TABLE request_limits(key text PRIMARY KEY,count integer NOT NULL,expires timestamptz NOT NULL);
+CREATE TABLE profiles(user_id varchar(36) PRIMARY KEY REFERENCES users(id),name varchar(100) NOT NULL,phone varchar(10) NOT NULL,line1 varchar(200) NOT NULL,line2 varchar(200) NOT NULL DEFAULT '',city varchar(100) NOT NULL,state varchar(100) NOT NULL,pincode varchar(6) NOT NULL,updated timestamptz NOT NULL DEFAULT now());
+CREATE TABLE products(id varchar(36) PRIMARY KEY,name varchar(120) NOT NULL,description text NOT NULL,category varchar(30) NOT NULL,price integer NOT NULL CHECK(price>=100),stock integer NOT NULL CHECK(stock>=0),image text,colour varchar(120) NOT NULL,published integer NOT NULL DEFAULT 0 CHECK(published IN (0,1)),created timestamptz NOT NULL DEFAULT now());
+CREATE INDEX products_public ON products(published,created);
+CREATE TABLE orders(id varchar(36) PRIMARY KEY,user_id varchar(36) NOT NULL REFERENCES users(id),email varchar(254) NOT NULL,title varchar(120) NOT NULL,details text NOT NULL,status varchar(20) NOT NULL DEFAULT 'requested',amount integer,file text,shipping text,payment_ref text,carrier text,tracking text,created timestamptz NOT NULL DEFAULT now());
+CREATE INDEX orders_user_created ON orders(user_id,created);
+CREATE TABLE messages(id varchar(36) PRIMARY KEY,order_id varchar(36) NOT NULL REFERENCES orders(id),user_id varchar(36) NOT NULL REFERENCES users(id),role varchar(12) NOT NULL,body text NOT NULL,created timestamptz NOT NULL DEFAULT now());
+CREATE INDEX messages_order ON messages(order_id,created);
+CREATE TABLE uploads(key text PRIMARY KEY,user_id varchar(36) NOT NULL REFERENCES users(id),mime varchar(50) NOT NULL,catalogue boolean NOT NULL,created timestamptz NOT NULL DEFAULT now());
+CREATE TABLE order_events(id varchar(36) PRIMARY KEY,order_id varchar(36) NOT NULL REFERENCES orders(id),kind varchar(50) NOT NULL,payload text NOT NULL,created timestamptz NOT NULL DEFAULT now(),delivery_status varchar(20) NOT NULL DEFAULT 'pending',attempts integer NOT NULL DEFAULT 0,next_attempt timestamptz NOT NULL DEFAULT now());
+CREATE INDEX events_pending ON order_events(delivery_status,next_attempt);
