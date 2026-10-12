@@ -33,20 +33,47 @@ public class MailService {
 
   public void send(String to, String subject, String text) {
     if ("resend".equals(provider)) {
-      if (apiKey.isBlank()) throw new ApiError(503, "Email delivery has not been configured.");
+      if (apiKey.isBlank()) {
+        org.slf4j.LoggerFactory.getLogger(MailService.class)
+            .error("Email delivery unavailable: RESEND_API_KEY is empty");
+        throw new ApiError(503, "Email delivery has not been configured.");
+      }
       var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
       factory.setConnectTimeout(10000);
       factory.setReadTimeout(20000);
-      org.springframework.web.client.RestClient.builder()
-          .requestFactory(factory)
-          .build()
-          .post()
-          .uri("https://api.resend.com/emails")
-          .header("Authorization", "Bearer " + apiKey)
-          .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-          .body(Map.of("from", from, "to", java.util.List.of(to), "subject", subject, "text", text))
-          .retrieve()
-          .toBodilessEntity();
+      try {
+        org.springframework.web.client.RestClient.builder()
+            .requestFactory(factory)
+            .build()
+            .post()
+            .uri("https://api.resend.com/emails")
+            .header("Authorization", "Bearer " + apiKey)
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+            .body(
+                Map.of("from", from, "to", java.util.List.of(to), "subject", subject, "text", text))
+            .retrieve()
+            .toBodilessEntity();
+      } catch (org.springframework.web.client.RestClientResponseException e) {
+        // Categorize the provider error without logging recipient addresses, tokens or API keys.
+        String body = e.getResponseBodyAsString().toLowerCase(java.util.Locale.ROOT);
+        String reason =
+            e.getStatusCode().value() == 401
+                ? "invalid_api_key"
+                : body.contains("domain") && (body.contains("verified") || body.contains("verify"))
+                    ? "sender_domain_not_verified"
+                    : body.contains("testing emails") || body.contains("own email")
+                        ? "test_sender_recipient_restriction"
+                        : e.getStatusCode().value() == 429
+                            ? "email_rate_limit"
+                            : "provider_rejected_request";
+        org.slf4j.LoggerFactory.getLogger(MailService.class)
+            .error("Email delivery rejected: HTTP {} reason={}", e.getStatusCode().value(), reason);
+        throw new ApiError(503, "Email delivery is unavailable. Please try again later.");
+      } catch (org.springframework.web.client.ResourceAccessException e) {
+        org.slf4j.LoggerFactory.getLogger(MailService.class)
+            .error("Email delivery unavailable: provider connection failed");
+        throw new ApiError(503, "Email delivery is unavailable. Please try again later.");
+      }
       return;
     }
     if (!"smtp".equals(provider))
